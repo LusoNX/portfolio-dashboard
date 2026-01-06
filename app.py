@@ -67,8 +67,9 @@ with tab_perf:
     split_date = pd.to_datetime("2025-10-15")
 
     segments = {
-        "Segment 1": df[df.index < split_date].copy(),
-        "Segment 2": df[df.index >= split_date].copy()
+        "October to Date": df[df.index >= split_date].copy(),
+        "January to September": df[df.index < split_date].copy()
+        
     }
 
     for name, df_seg in segments.items():
