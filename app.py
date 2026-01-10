@@ -16,7 +16,7 @@ st.title("Portfolio Performance Dashboard (USD)")
 @st.cache_data(ttl=3600)
 def load_data():
     df = pd.read_excel(
-        "portfolio_values.xlsx",
+        "portfolio_values_app.xlsx",
         index_col=0,
         parse_dates=True
     )
@@ -24,7 +24,7 @@ def load_data():
     df = df[df.index.weekday < 5].dropna()
 
     df_w = pd.read_excel(
-        "next_week_weights_estimate.xlsx",
+        "next_week_weights_estimate_app.xlsx",
         index_col=0
     )
 
@@ -42,10 +42,11 @@ def perf_stats(returns):
     sharpe = mean_ann / vol_ann if vol_ann != 0 else np.nan
 
     cum = (1 + returns).cumprod()
+    cum_ret = cum.iloc[-1] - 1
     drawdown = cum / cum.cummax() - 1
     max_dd = drawdown.min()
 
-    return mean_ann, vol_ann, sharpe, max_dd
+    return cum_ret, vol_ann, sharpe, max_dd
 
 def tracking_error(port_ret, bench_ret):
     diff = port_ret - bench_ret
@@ -74,15 +75,21 @@ with tab_perf:
 
     for name, df_seg in segments.items():
 
-        if len(df_seg) < 2:
-            continue
+        if name == "January to September":
+            df_seg["Port Perf EUR"] = df_seg["buying_power"] / df_seg["buying_power"].iloc[0]
+            df_seg["Portfolio USD"] = df_seg["buying_power"] * df_seg["FX_EURUSD"]
+            df_seg["Port Perf USD"] = df_seg["Portfolio USD"] / df_seg["Portfolio USD"].iloc[0]
+        else:
 
-        df_seg["Portfolio USD"] = df_seg["portfolio_value"] * df_seg["FX_EURUSD"]
-        df_seg["Port Perf USD"] = df_seg["Portfolio USD"] / df_seg["Portfolio USD"].iloc[0]
+            df_seg["Port Perf USD"] = df_seg["buying_power"] / df_seg["buying_power"].iloc[0]
+            
+        # df_seg["Portfolio USD"] = df_seg["portfolio_value"] * df_seg["FX_EURUSD"]
+        # df_seg["Port Perf USD"] = df_seg["Portfolio USD"] / df_seg["Portfolio USD"].iloc[0]
         df_seg["SPX Perf USD"] = df_seg["SPX USD"] / df_seg["SPX USD"].iloc[0]
 
         df_seg["Port Ret"] = df_seg["Port Perf USD"].pct_change()
         df_seg["SPX Ret"] = df_seg["SPX Perf USD"].pct_change()
+
         df_ret = df_seg.dropna()
 
         fig = px.line(
@@ -102,14 +109,14 @@ with tab_perf:
 
         with col1:
             st.markdown("#### 🚀 Portfolio")
-            st.metric("Mean (ann)", f"{pm:.2%}")
+            st.metric("Accumulated Period Return", f"{pm:.2%}")
             st.metric("Volatility", f"{pv:.2%}")
             st.metric("Sharpe", f"{ps:.2f}")
             st.metric("Max Drawdown", f"{pdd:.2%}")
 
         with col2:
             st.markdown("#### 📈 S&P 500")
-            st.metric("Mean (ann)", f"{bm:.2%}")
+            st.metric("Accumulated Period Return", f"{bm:.2%}")
             st.metric("Volatility", f"{bv:.2%}")
             st.metric("Sharpe", f"{bs:.2f}")
             st.metric("Max Drawdown", f"{bdd:.2%}")
@@ -126,10 +133,12 @@ with tab_week:
     # =========================
     # WEEKLY PERFORMANCE
     # =========================
-    df_week = df.iloc[-5:].copy()
+    #df_week = df.iloc[-4:].copy()
 
-    df_week["Portfolio USD"] = df_week["buying_power"] * df_week["FX_EURUSD"]
-    df_week["Port Perf USD"] = df_week["Portfolio USD"] / df_week["Portfolio USD"].iloc[0]
+    df_week = df.iloc[-5:]
+    df_week["Port EUR"] = df_week["buying_power"] / df_week["FX_EURUSD"]
+    df_week["Port Perf EUR"] = df_week["Port EUR"] / df_week["Port EUR"].iloc[0]
+    df_week["Port Perf USD"] = df_week["buying_power"] / df_week["buying_power"].iloc[0]
     df_week["SPX Perf USD"] = df_week["SPX USD"] / df_week["SPX USD"].iloc[0]
 
     week_start = df_week.index.min().date()
@@ -169,16 +178,21 @@ with tab_week:
             if isinstance(data.columns, pd.MultiIndex):
                 data.columns = [c[0] for c in data.columns]
 
-            if len(data) > 1 and "Close" in data.columns:
-                ret = data["Close"].iloc[-1] / data["Close"].iloc[0] - 1
-                ticker_perf.append((ticker, ret))
+            ret = data["Close"].iloc[-1] / data["Close"].iloc[0] - 1
+            
+            ticker_perf.append((ticker, ret))
         except:
             pass
+    
 
+
+    
     if ticker_perf:
         perf_df = pd.DataFrame(ticker_perf, columns=["Ticker", "Return"])
+
         perf_df["Return"] = perf_df["Return"].round(4)
 
+     
         fig = px.bar(
             perf_df,
             x="Return",
