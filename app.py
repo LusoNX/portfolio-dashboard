@@ -135,7 +135,7 @@ with tab_week:
     # =========================
     #df_week = df.iloc[-4:].copy()
 
-    df_week = df.iloc[-5:]
+    df_week = df.iloc[-4:]
     df_week["Port EUR"] = df_week["buying_power"] / df_week["FX_EURUSD"]
     df_week["Port Perf EUR"] = df_week["Port EUR"] / df_week["Port EUR"].iloc[0]
     df_week["Port Perf USD"] = df_week["buying_power"] / df_week["buying_power"].iloc[0]
@@ -143,7 +143,7 @@ with tab_week:
 
     week_start = df_week.index.min().date()
     week_end = df_week.index.max().date()
-
+ 
     port_ret = df_week["Port Perf USD"].iloc[-1] - 1
     spx_ret = df_week["SPX Perf USD"].iloc[-1] - 1
     outperf = port_ret - spx_ret
@@ -167,13 +167,13 @@ with tab_week:
     ticker_perf = []
 
     for ticker in trading_tickers:
-        try:
+        #try:
             data = yf.download(
                 ticker,
                 start=week_start,
-                end=week_end,
                 progress=False
             )
+            data = data[data.index <= pd.to_datetime(week_end)]
 
             if isinstance(data.columns, pd.MultiIndex):
                 data.columns = [c[0] for c in data.columns]
@@ -181,10 +181,9 @@ with tab_week:
             ret = data["Close"].iloc[-1] / data["Close"].iloc[0] - 1
             
             ticker_perf.append((ticker, ret))
-        except:
-            pass
+        # except:
+        #     pass
     
-
 
     
     if ticker_perf:
