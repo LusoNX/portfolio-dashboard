@@ -135,7 +135,7 @@ with tab_week:
     # =========================
     #df_week = df.iloc[-4:].copy()
 
-    df_week = df.iloc[-4:]
+    df_week = df.iloc[-6:]
     df_week["Port EUR"] = df_week["buying_power"] / df_week["FX_EURUSD"]
     df_week["Port Perf EUR"] = df_week["Port EUR"] / df_week["Port EUR"].iloc[0]
     df_week["Port Perf USD"] = df_week["buying_power"] / df_week["buying_power"].iloc[0]
